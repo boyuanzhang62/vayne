@@ -29,6 +29,11 @@ from kvpress import (
     StreamingLLMPress,
     ThinKPress,
     TOVAPress,
+    IdlePress,
+    ErrorBoundQuantizedPress,
+    KiviPress,
+    Vayne0Press,
+    Vayne1Press,
 )
 
 # These dictionaries define the available datasets, scorers, and KVPress methods for evaluation.
@@ -78,4 +83,9 @@ PRESS_REGISTRY = {
     "streaming_llm": StreamingLLMPress(),
     "think": ThinKPress(),
     "tova": TOVAPress(),
+    "idle": IdlePress(),
+    "error_bound_quantized": ErrorBoundQuantizedPress(),
+    "kivi": KiviPress(),
+    "vayne0": Vayne0Press(),
+    "vayne1": Vayne1Press(),
 }

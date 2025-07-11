@@ -7,6 +7,7 @@ import sys
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any, Dict, Optional
+import os
 
 import pandas as pd  # Import pandas for DataFrame type hinting
 import torch
@@ -17,7 +18,7 @@ from fire import Fire
 from tqdm import tqdm
 from transformers import Pipeline, pipeline
 
-from kvpress import ComposedPress, DuoAttentionPress, FinchPress, ObservedAttentionPress, ThinKPress
+from kvpress import ComposedPress, DuoAttentionPress, FinchPress, ObservedAttentionPress, ThinKPress, Vayne0Press
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +35,7 @@ class EvaluationConfig:
     press_name: str = "knorm"
     compression_ratio: float = 1.0
     key_channel_compression_ratio: Optional[float] = None
+    nbits: int = None
 
     # Dataset and generation parameters
     fraction: float = 1.0
@@ -108,6 +110,8 @@ class EvaluationConfig:
             components.append("compressed_questions")
         if self.key_channel_compression_ratio is not None:
             components.append(f"key_channel_cr{self.key_channel_compression_ratio:.2f}")
+        if self.nbits is not None:
+            components.append(f"nbits{self.nbits}")
 
         dir_name = "__".join(filter(None, components))  # Filter None/empty strings
         config_dir = output_dir / dir_name
@@ -235,6 +239,10 @@ class EvaluationRunner:
             assert key_channel_compression_ratio is not None, "key_channel_compression_ratio must be set for ThinKPress"
             press.key_channel_compression_ratio = key_channel_compression_ratio
             logger.info(f"Set ThinKPress key_channel_compression_ratio to {key_channel_compression_ratio}")
+        elif isinstance(press, Vayne0Press):
+            if self.config.nbits is not None:
+                press.nbits = self.config.nbits
+                logger.info(f"Set {press.__class__.__name__} nbits to {self.config.nbits}")
         else:
             if hasattr(press, "compression_ratio"):
                 press.compression_ratio = compression_ratio
@@ -300,7 +308,7 @@ class EvaluationRunner:
             self.df["context"] = self.df["context"] + self.df["question"]  # type: ignore[index]
             self.df["question"] = ""  # type: ignore[index]
 
-    def _run_inference(self):
+    def _run_inference(self, txt_filename):
         """
         Executes the inference process on the prepared dataset using the model pipeline.
         """
@@ -326,6 +334,10 @@ class EvaluationRunner:
                 max_new_tokens=max_new_tokens,
                 max_context_length=self.config.max_context_length,
             )
+            my_compression_ratio = self.press.total_original_bits / self.press.total_compressed_bits
+            with open(txt_filename, "a") as f:
+                f.write(str(my_compression_ratio) + '\n')
+
             self.df.loc[df_group.index, "predicted_answer"] = output["answers"]  # type: ignore[union-attr]
             # Store the actual compression ratio used (if the press has one)
             self.df.loc[df_group.index, "compression_ratio"] = self.press.compression_ratio  # type: ignore[union-attr, attr-defined]
@@ -381,6 +393,10 @@ class EvaluationRunner:
         predictions_filename = results_dir / "predictions.csv"
         metrics_filename = results_dir / "metrics.json"
         config_filename = results_dir / "config.yaml"
+        txt_filename = results_dir / "compression_ratio.txt"
+        if not os.path.exists(txt_filename):
+            with open(txt_filename, "w") as f:
+                pass  # Creates an empty file
 
         if predictions_filename.exists() and metrics_filename.exists():
             logger.info(
@@ -393,7 +409,7 @@ class EvaluationRunner:
         self._setup_model_pipeline()
         self._prepare_data_for_inference()
 
-        self._run_inference()
+        self._run_inference(txt_filename)
         self._save_results(predictions_filename)
         self._calculate_and_save_metrics(metrics_filename)
         self.config.save_config(config_filename)

@@ -29,6 +29,11 @@ from kvpress.presses.snapkv_press import SnapKVPress
 from kvpress.presses.streaming_llm_press import StreamingLLMPress
 from kvpress.presses.think_press import ThinKPress
 from kvpress.presses.tova_press import TOVAPress
+from kvpress.presses.idle_press import IdlePress
+from kvpress.presses.error_bound_quantized_press import ErrorBoundQuantizedPress
+from kvpress.presses.kivi_press import KiviPress
+from kvpress.presses.vayne0_press import Vayne0Press
+from kvpress.presses.vayne1_press import Vayne1Press
 
 # Patch the attention functions to support head-wise compression
 patch_attention_functions()
@@ -61,4 +66,9 @@ __all__ = [
     "LagKVPress",
     "BlockPress",
     "KeyDiffPress",
+    "IdlePress",
+    "ErrorBoundQuantizedPress",
+    "KiviPress",
+    "Vayne0Press",
+    "Vayne1Press",
 ]
