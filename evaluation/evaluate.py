@@ -337,6 +337,8 @@ class EvaluationRunner:
             my_compression_ratio = self.press.total_original_bits / self.press.total_compressed_bits
             with open(txt_filename, "a") as f:
                 f.write(str(my_compression_ratio) + '\n')
+            self.press.total_original_bits = 0
+            self.press.total_compressed_bits = 0
 
             self.df.loc[df_group.index, "predicted_answer"] = output["answers"]  # type: ignore[union-attr]
             # Store the actual compression ratio used (if the press has one)
